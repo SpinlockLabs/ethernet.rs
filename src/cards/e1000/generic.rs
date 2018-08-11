@@ -6,6 +6,22 @@ use std::time::Duration;
 error_chain! {
 }
 
+#[allow(unused)]
+mod constants {
+    pub const E1000_REG_CTRL : usize = 0x0000;
+    pub const E1000_REG_STATUS : usize = 0x0008;
+    pub const E1000_REG_EEPROM : usize = 0x0014;
+    pub const E1000_REG_EXT : usize = 0x0018;
+
+    pub const E1000_REG_ICR : usize = 0x000C0;
+    pub const E1000_REG_IMS : usize = 0x000D0;
+    pub const E1000_REG_IMC : usize = 0x000D8;
+}
+
+pub const E1000_SUPPORTED_DEVICES : [u32; 1] = [
+    0x15b8
+];
+
 #[repr(packed)]
 pub struct E1000RxDesc {
     pub addr: u64,
@@ -33,15 +49,6 @@ pub struct E1000Buffer {
     pub length: usize
 }
 
-pub const E1000_REG_CTRL : usize = 0x0000;
-pub const E1000_REG_STATUS : usize = 0x0008;
-pub const E1000_REG_EEPROM : usize = 0x0014;
-pub const E1000_REG_EXT : usize = 0x0018;
-
-pub const E1000_REG_ICR : usize = 0x000C0;
-pub const E1000_REG_IMS : usize = 0x000D0;
-pub const E1000_REG_IMC : usize = 0x000D8;
-
 pub struct E1000DeviceDriver {
     mem: *mut u32
 }
@@ -68,7 +75,7 @@ impl E1000DeviceDriver {
 
     pub fn read_status(&self) -> u32 {
         unsafe {
-            return self.read_cmd(E1000_REG_STATUS);
+            return self.read_cmd(constants::E1000_REG_STATUS);
         }
     }
 
@@ -86,19 +93,19 @@ impl E1000DeviceDriver {
 
     pub fn init_device(&self) -> Result<()> {
         unsafe {
-            self.write_cmd(E1000_REG_CTRL, 1 << 26);
+            self.write_cmd(constants::E1000_REG_CTRL, 1 << 26);
             sleep(Duration::from_millis(1));
-            let mut status = self.read_cmd(E1000_REG_CTRL);
+            let mut status = self.read_cmd(constants::E1000_REG_CTRL);
             status |= 1 << 5; // Auto Speed Detection
             status |= 1 << 6; // Link Up
             status &= !(1 << 3); // Disable Reset Link
             status &= !(1 << 31); // Disable Reset Phy
             status &= !(1 << 7); // Unset Invert Loss-of-Signal
-            self.write_cmd(E1000_REG_CTRL, status);
+            self.write_cmd(constants::E1000_REG_CTRL, status);
             sleep(Duration::from_millis(1));
-            status = self.read_cmd(E1000_REG_CTRL);
+            status = self.read_cmd(constants::E1000_REG_CTRL);
             status &= !(1 << 30);
-            self.write_cmd(E1000_REG_CTRL, status);
+            self.write_cmd(constants::E1000_REG_CTRL, status);
             sleep(Duration::from_millis(1));
 
             for i in 0..128 {

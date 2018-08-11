@@ -32,7 +32,7 @@ impl From<ParseIntError> for UioError {
 
 pub struct UioDevice {
     uio_num: usize,
-    devfile: File,
+    devfile: File
 }
 
 impl UioDevice {
@@ -57,6 +57,23 @@ impl UioDevice {
         Ok(UioDevice { uio_num, devfile: f })
     }
 
+    /// List all discovered UIO devices.
+    pub fn list_devices() -> io::Result<Vec<UioDevice>> {
+        let paths = fs::read_dir("/sys/class/uio")?;
+
+        let mut devices = Vec::new();
+        for p in paths {
+            let path = p?;
+            let file_name = path.file_name().into_string()
+                .expect("Is valid UTF-8 string.");
+
+            if file_name.starts_with("uio") {
+                devices.push(UioDevice::new_by_name(file_name.as_str())?);
+            }
+        }
+        Ok(devices)
+    }
+
     /// Return a vector of mappable resources (i.e., PCI bars) including their size.
     pub fn get_resource_info(&mut self) -> Result<Vec<(String, u64)>, UioError> {
         let paths = fs::read_dir(format!("/sys/class/uio/uio{}/device/", self.uio_num))?;
@@ -64,7 +81,8 @@ impl UioDevice {
         let mut bars = Vec::new();
         for p in paths {
             let path = p?;
-            let file_name = path.file_name().into_string().expect("Is valid UTF-8 string.");
+            let file_name = path.file_name().into_string()
+                .expect("Is valid UTF-8 string.");
 
             if file_name.starts_with("resource") && file_name.len() > "resource".len() {
                 let metadata = fs::metadata(path.path())?;
@@ -183,5 +201,10 @@ impl UioDevice {
         unsafe {
             Ok(mopts.map_mut(&self.devfile)?)
         }
+    }
+
+    /// Returns the UIO device number for this device.
+    pub fn dev_num(&self) -> usize {
+        return self.uio_num;
     }
 }
